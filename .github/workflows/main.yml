@@ -22,8 +22,7 @@ jobs:
 
     - name: Build and push Docker image
       run: |
-        docker buildx build app -t docker.io/${{ secrets.DOCKER_USERNAME }}/devsecops-for-zerotrust:latest --push
-
+        docker buildx build -t docker.io/${{ secrets.DOCKER_USERNAME }}/devsecops-for-zerotrust:latest app --push
 
     - name: Scan image with Trivy
       uses: aquasecurity/trivy-action@master
