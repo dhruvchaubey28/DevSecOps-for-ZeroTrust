@@ -1,13 +1,46 @@
-FROM python:3.10-slim
+# FreshMart Grocery Shop - Dockerfile
+# Multi-stage build for optimized production image
 
-WORKDIR /app
+# Stage 1: Use Nginx Alpine for minimal footprint
+FROM nginx:alpine
 
-COPY requirements.txt .
-RUN pip install --upgrade pip && pip install --no-cache-dir -r requirements.txt
+# Set maintainer label
+LABEL maintainer="FreshMart Team"
+LABEL description="FreshMart Grocery Shop - Static Website"
+LABEL version="1.0"
 
-COPY . .
+# Remove default nginx static assets
+RUN rm -rf /usr/share/nginx/html/*
 
-RUN useradd -m appuser
-USER appuser
+# Copy the HTML file to nginx directory
+COPY index.html /usr/share/nginx/html/index.html
 
-CMD ["python", "app.py"]
+# Copy the CSS and JS files, copy them too
+COPY styles.css /usr/share/nginx/html/styles.css
+COPY script.js /usr/share/nginx/html/script.js
+
+# Optional: Copy custom nginx configuration (if needed)
+# COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Create nginx user (if not exists) and set permissions
+RUN addgroup -g 1000 -S nginx-group && \
+    adduser -u 1000 -S nginx-user -G nginx-group || true && \
+    chown -R nginx:nginx /usr/share/nginx/html && \
+    chown -R nginx:nginx /var/cache/nginx && \
+    chown -R nginx:nginx /var/log/nginx && \
+    chown -R nginx:nginx /etc/nginx/conf.d && \
+    touch /var/run/nginx.pid && \
+    chown -R nginx:nginx /var/run/nginx.pid
+
+# Switch to non-root user for security
+USER nginx
+
+# Expose port 80
+EXPOSE 80
+
+# Health check to ensure nginx is running
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD wget --quiet --tries=1 --spider http://localhost:80/ || exit 1
+
+# Start Nginx server
+CMD ["nginx", "-g", "daemon off;"]
