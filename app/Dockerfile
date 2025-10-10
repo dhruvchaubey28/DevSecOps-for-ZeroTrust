@@ -1,7 +1,3 @@
-# FreshMart Grocery Shop - Dockerfile
-# Multi-stage build for optimized production image
-
-# Stage 1: Use Nginx Alpine for minimal footprint
 FROM nginx:alpine
 
 # Set maintainer label
@@ -9,18 +5,22 @@ LABEL maintainer="FreshMart Team"
 LABEL description="FreshMart Grocery Shop - Static Website"
 LABEL version="1.0"
 
+# Remove default nginx configuration
+RUN rm -rf /etc/nginx/conf.d/*
+
 # Remove default nginx static assets
 RUN rm -rf /usr/share/nginx/html/*
 
-# Copy the HTML file to nginx directory
+# Copy the HTML, CSS and JS file to nginx directory
 COPY index.html /usr/share/nginx/html/index.html
-
-# Copy the CSS and JS files, copy them too
 COPY styles.css /usr/share/nginx/html/styles.css
 COPY script.js /usr/share/nginx/html/script.js
 
 # Custom nginx configuration
 COPY nginx-security.conf /etc/nginx/conf.d/default.conf
+
+# Set proper permissions
+RUN chown -R nginx:nginx /usr/share/nginx/html
 
 # Create nginx user (if not exists) and set permissions
 RUN addgroup -g 1000 -S nginx-group && \
