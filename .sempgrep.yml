@@ -1,0 +1,23 @@
+# .sempgrep.yml
+rules:
+  - id: hardcoded-secrets
+    patterns:
+      - pattern: (password|secret|key|token)\s*=\s*['\"].+['\"]
+    message: "Hardcoded secret detected"
+    languages: [python, javascript, yaml, generic]
+    severity: ERROR
+    
+  - id: dockerfile-security
+    patterns:
+      - pattern: FROM .*:latest
+    message: "Avoid using 'latest' tag in Docker"
+    languages: [dockerfile]
+    severity: WARNING
+    
+  - id: shell-injection
+    patterns:
+      - pattern: os.system(...)
+      - pattern: subprocess.call(...)
+    message: "Potential shell injection vulnerability"
+    languages: [python]
+    severity: ERROR

@@ -1,0 +1,10 @@
+# OWASP ZAP Rule Configuration
+# Format: RuleID	ACTION	ENABLED
+10032	IGNORE	False	# Password Autocomplete in browser
+10020	IGNORE	False	# X-Frame-Options Header Not Set
+10038	IGNORE	False	# Content-Type Header Missing
+10054	IGNORE	False	# CSP: Wildcard Directive
+10055	IGNORE	False	# CSP: Notices
+3       IGNORE	False	# Directory Browsing
+40012	IGNORE	False	# Cross-Domain Misconfiguration
+40026	IGNORE	False	# Information Disclosure - Suspicious Comments

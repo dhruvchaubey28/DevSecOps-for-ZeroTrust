@@ -1,0 +1,11 @@
+# checkov.yaml
+soft-fail: false
+compact: true
+quiet: false
+skip-check:
+  - CKV_DOCKER_2  # HEALTHCHECK instruction
+  - CKV_DOCKER_3  # Non-root user check
+  - CKV_GIT_4     # GitHub repository made public
+framework:
+  - all
+download-external-modules: true

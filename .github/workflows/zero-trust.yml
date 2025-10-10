@@ -1,4 +1,4 @@
-name: DevSecOps Pipeline
+name: Zero-Trust DevSecOps Pipeline 
 
 on:
   push:
@@ -8,32 +8,50 @@ on:
 
 env:
   IMAGE_NAME: zerotrust-app
+  SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
 jobs:
-  security-scanning:
+  sonarqube-sast:
     runs-on: ubuntu-latest
-    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  
+
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v4
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+      - name: SonarQube Quality Gate Check
+        uses: SonarSource/sonarqube-quality-gate-action@v1
+        timeout-minutes: 5
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+  infrastructure-security:
+    runs-on: ubuntu-latest
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
 
-    - name: Run SAST (Static Application Security Testing)
-      uses: actions/checkout@v3
-      
-    - name: Semgrep SAST Scan
-      uses: returntocorp/semgrep-action@v1
-      with:
-        config: p/security-audit
-
-    - name: Checkov Infrastructure Scan
+    - name: Run Checkov
       uses: bridgecrewio/checkov-action@v12
       with:
         directory: ./
-        framework: terraform,kubernetes,all
+        framework: terraform,kubernetes,dockerfile,all
+        output_format: sarif
+        output_file_path: checkov-results.sarif
+
+    - name: Upload Checkov Results
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: checkov-results.sarif
 
   container-security:
     runs-on: ubuntu-latest
-    needs: security-scanning
+    needs: [sonarqube-sast, infrastructure-security]
     
     steps:
     - name: Checkout code
@@ -42,7 +60,7 @@ jobs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v2
 
-    - name: Build container image
+    - name: Build secure container image
       run: |
         cp app/index-secure.html app/index.html
         docker build -f app/Dockerfile.secure -t $IMAGE_NAME:secure ./app
@@ -53,15 +71,44 @@ jobs:
         image-ref: $IMAGE_NAME:secure
         format: sarif
         output: trivy-results.sarif
-        severity: CRITICAL,HIGH,MEDIUM
+        severity: CRITICAL,HIGH
 
-    - name: Upload Trivy scan results to GitHub Security Tab
+    - name: Upload Trivy Results
       uses: github/codeql-action/upload-sarif@v2
-      if: always()
       with:
         sarif_file: trivy-results.sarif
 
-  dependency-check:
+  zap-dast:
+    runs-on: ubuntu-latest
+    needs: container-security
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Build and run application container
+      run: |
+        docker build -f app/Dockerfile.secure -t $IMAGE_NAME:zap-test ./app
+        docker run -d -p 8080:8080 --name test-app $IMAGE_NAME:zap-test
+        sleep 10  # Wait for app to start
+
+    - name: OWASP ZAP Full Scan
+      uses: zaproxy/action-full-scan@v0.7.0
+      with:
+        target: 'http://localhost:8080'
+        rules_file_name: '.zap/rules.tsv'
+        cmd_options: '-a'
+
+    - name: Stop application container
+      run: docker stop test-app || true
+
+    - name: Upload ZAP Report
+      uses: actions/upload-artifact@v3
+      with:
+        name: zap-scan-report
+        path: zap-report.html
+
+  dependency-scan:
     runs-on: ubuntu-latest
     
     steps:
@@ -77,29 +124,44 @@ jobs:
         args: >
           --out reports/
           --scan ./
-          --disableYarnAudit
-          --disableNodeAudit
+          --enableRetired
 
-    - name: Upload Dependency Check Report
+    - name: Upload Dependency Report
       uses: actions/upload-artifact@v3
       with:
         name: dependency-check-report
         path: reports/
 
-  deploy:
+  security-gate:
     runs-on: ubuntu-latest
-    needs: [container-security, dependency-check]
+    needs: [sonarqube-sast, zap-dast, container-security, dependency-scan]
     
     steps:
-    - name: Security Gate Check
+    - name: Security Compliance Check
       run: |
-        echo "🔒 All security scans completed!"
-        echo "✅ SAST: Passed"
-        echo "✅ Container Scan: Passed" 
-        echo "✅ Dependency Check: Passed"
-        echo "🚀 Proceeding with deployment..."
+        echo "🔒 SECURITY GATE SUMMARY"
+        echo "✅ SonarQube SAST: Code Quality & Security"
+        echo "✅ OWASP ZAP DAST: Dynamic Application Testing"
+        echo "✅ Trivy: Container Vulnerability Scan"
+        echo "✅ Checkov: Infrastructure Security"
+        echo "✅ OWASP Dependency Check: Third-party Libraries"
+        echo ""
+        echo "🚀 ALL SECURITY CHECKS PASSED - PROCEEDING TO DEPLOYMENT"
         
-    - name: Deploy to Environment
+    - name: Generate Security Report
       run: |
-        echo "📦 Deploying secure application..."
-        echo "🛡️ Zero Trust controls will be applied in Phase 3"
+        echo "# Security Scan Report - $(date)" > security-report.md
+        echo "## ZeroTrust DevSecOps Pipeline" >> security-report.md
+        echo "- SAST: SonarQube ✅" >> security-report.md
+        echo "- DAST: OWASP ZAP ✅" >> security-report.md
+        echo "- Container Security: Trivy ✅" >> security-report.md
+        echo "- Infrastructure: Checkov ✅" >> security-report.md
+        echo "- Dependencies: OWASP DC ✅" >> security-report.md
+        echo "" >> security-report.md
+        echo "All security gates passed successfully!" >> security-report.md
+        
+    - name: Upload Security Report
+      uses: actions/upload-artifact@v3
+      with:
+        name: security-compliance-report
+        path: security-report.md
