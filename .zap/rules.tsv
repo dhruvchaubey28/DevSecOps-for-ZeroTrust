@@ -1,5 +1,6 @@
 # OWASP ZAP Rule Configuration
-# Format: RuleID	ACTION	ENABLED
+# Format: 
+RuleID	ACTION	ENABLED
 10032	IGNORE	False	# Password Autocomplete in browser
 10020	IGNORE	False	# X-Frame-Options Header Not Set
 10038	IGNORE	False	# Content-Type Header Missing

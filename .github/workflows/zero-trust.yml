@@ -136,8 +136,8 @@ jobs:
     - name: Build and run application container
       run: |
         docker build -f app/Dockerfile -t $IMAGE_NAME:zap-test ./app
-        docker run -d -p 8080:80 --name test-app $IMAGE_NAME:zap-test
-        sleep 15  # Wait for app to start
+        docker run -d -p 8080:8080 --name test-app $IMAGE_NAME:zap-test
+        sleep 10
 
     - name: Verify application is running
       run: |
