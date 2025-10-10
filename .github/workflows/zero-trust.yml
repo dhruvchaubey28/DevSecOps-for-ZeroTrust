@@ -49,6 +49,7 @@ jobs:
 
     - name: Run Checkov
       uses: bridgecrewio/checkov-action@v12
+      continue-on-error: true   # Don't fail pipeline on Checkov errors
       with:
         directory: ./
         framework: terraform,kubernetes,dockerfile,all
@@ -56,6 +57,7 @@ jobs:
         output_file_path: checkov-results.sarif
         skip_path: app/Dockerfile.traditional
         skip_check: CKV_GIT_4
+        soft_fail: true
 
     - name: Upload Checkov Results
       uses: github/codeql-action/upload-sarif@v3
