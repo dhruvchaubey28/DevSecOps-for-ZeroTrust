@@ -330,10 +330,10 @@ jobs:
         echo "🔒 New image reference: $IMAGE_WITH_DIGEST"
         
         # Update the image in deployment.yaml
-        sed -i "s|image: ${{ secrets.DOCKERHUB_USERNAME }}/devsecops-for-zerotrust:.*|image: $IMAGE_WITH_DIGEST|g" k8s/deployment.yaml
+        sed -i "s|image: ${{ secrets.DOCKERHUB_USERNAME }}/devsecops-for-zerotrust:.*|image: $IMAGE_WITH_DIGEST|g" app/k8s/deployment.yaml
         
         # Verify the change
-        grep "image:" k8s/deployment.yaml
+        grep "image:" app/k8s/deployment.yaml
         
     - name: Commit and push if changed
       run: |
