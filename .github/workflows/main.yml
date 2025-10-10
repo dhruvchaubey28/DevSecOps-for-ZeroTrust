@@ -14,9 +14,8 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v3
 
-    - name: Debug - List environment variables (for troubleshooting)
+    - name: Debug - List environment variables
       run: |
-        echo "Checking if secrets are available:"
         echo "DOCKERHUB_USERNAME exists: ${{ secrets.DOCKERHUB_USERNAME != '' }}"
         echo "DOCKERHUB_PASSWORD exists: ${{ secrets.DOCKERHUB_PASSWORD != '' }}"
 
@@ -43,16 +42,29 @@ jobs:
         severity: CRITICAL,HIGH
         exit-code: 1
 
-    - name: Deploy to Minikube
-      run: |
-        # Install kubectl
-        curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-        chmod +x ./kubectl
-        sudo mv ./kubectl /usr/local/bin/
+    - name: Set up Kind
+      uses: helm/kind-action@v1.5.0
+      with:
+        version: v0.20.0
+        clusterName: zerotrust-cluster
 
-        # Configure Minikube (assuming Minikube is accessible via kind or similar)
-        eval $(minikube docker-env)  # This step won't work directly; adjust for GitHub Actions
+    - name: Install kubectl
+      run: |
+        curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+        echo "Verifying download..."
+        ls -lh kubectl
+        chmod +x kubectl
+        sudo mv kubectl /usr/local/bin/
+        kubectl version --client
+
+    - name: Debug - Check Kind cluster
+      run: |
+        kubectl cluster-info
+        kubectl get nodes
+
+    - name: Deploy to Kind cluster
+      run: |
         kubectl apply -f ./app/k8s/deployment.yaml
         kubectl rollout status deployment/static-website
       env:
-        KUBECONFIG: ~/.kube/config
+        KUBECONFIG: /home/runner/.kube/config
