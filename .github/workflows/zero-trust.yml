@@ -11,7 +11,7 @@ permissions:
   contents: read
 
 env:
-  IMAGE_NAME: zerotrust-app
+  IMAGE_NAME: dhruvchaubey18/devsecops-for-zerotrust
   IMAGE_TAG: v1.0.0
   REGISTRY_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
 
@@ -96,7 +96,6 @@ jobs:
         file: ./app/Dockerfile
         push: true
         tags: |
-          ${{ secrets.DOCKERHUB_USERNAME }}/devsecops-for-zerotrust:${{ env.IMAGE_TAG }}
           ${{ secrets.DOCKERHUB_USERNAME }}/devsecops-for-zerotrust:latest
         cache-from: type=gha
         cache-to: type=gha,mode=max
