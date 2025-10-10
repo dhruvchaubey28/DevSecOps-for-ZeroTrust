@@ -19,8 +19,8 @@ COPY index.html /usr/share/nginx/html/index.html
 COPY styles.css /usr/share/nginx/html/styles.css
 COPY script.js /usr/share/nginx/html/script.js
 
-# Optional: Copy custom nginx configuration (if needed)
-# COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Custom nginx configuration
+COPY nginx-security.conf /etc/nginx/conf.d/default.conf
 
 # Create nginx user (if not exists) and set permissions
 RUN addgroup -g 1000 -S nginx-group && \

@@ -1,0 +1,10 @@
+# Traditional DevOps - No security optimizations
+FROM nginx:1.21
+
+# Copy application
+COPY index.html /usr/share/nginx/html/
+
+# Expose port (no non-root user, no security headers)
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]
