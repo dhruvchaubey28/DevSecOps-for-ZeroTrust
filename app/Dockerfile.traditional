@@ -1,4 +1,7 @@
 # Traditional DevOps - No security optimizations
+# checkov:skip=CKV_DOCKER_2:Traditional example - intentionally missing HEALTHCHECK
+# checkov:skip=CKV_DOCKER_3:Traditional example - intentionally runs as root (removed USER directive)
+
 FROM nginx:1.21
 
 # Copy application

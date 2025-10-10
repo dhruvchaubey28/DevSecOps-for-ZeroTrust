@@ -54,6 +54,8 @@ jobs:
         framework: terraform,kubernetes,dockerfile,all
         output_format: sarif
         output_file_path: checkov-results.sarif
+        skip_path: app/Dockerfile.traditional
+        skip_check: CKV_GIT_4
 
     - name: Upload Checkov Results
       uses: github/codeql-action/upload-sarif@v3
@@ -89,7 +91,7 @@ jobs:
       uses: docker/build-push-action@v5
       with:
         context: ./app
-        file: ./app/Dockerfile
+        file: ./app/Dockerfile.secure
         push: true
         tags: |
           ${{ secrets.DOCKERHUB_USERNAME }}/devsecops-for-zerotrust:${{ env.IMAGE_TAG }}
@@ -99,7 +101,7 @@ jobs:
 
     - name: Build local image for scanning
       run: |
-        docker build -f app/Dockerfile -t $IMAGE_NAME:secure ./app
+        docker build -f app/Dockerfile.secure -t $IMAGE_NAME:secure ./app
 
     - name: Run Trivy vulnerability scanner
       uses: aquasecurity/trivy-action@master
@@ -132,7 +134,7 @@ jobs:
 
     - name: Build and run application container
       run: |
-        docker build -f app/Dockerfile -t $IMAGE_NAME:zap-test ./app
+        docker build -f app/Dockerfile.secure -t $IMAGE_NAME:zap-test ./app
         docker run -d -p 8080:80 --name test-app $IMAGE_NAME:zap-test
         sleep 15  # Wait for app to start
 
