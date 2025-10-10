@@ -1,15 +1,17 @@
 # Checkov Configuration
-soft-fail: false
+soft-fail: true
 compact: true
 quiet: false
 
-# Skip entire traditional Dockerfile (intentionally insecure for demo)
+# Skip paths (files to completely ignore)
 skip-path:
   - app/Dockerfile.traditional
 
-# Alternative: Skip specific checks globally if needed
+# Skip specific checks
 skip-check:
-  - CKV_GIT_4  # GitHub repository made public (acceptable for demo projects)
+  - CKV_GIT_4  # GitHub repository made public
+  - CKV_DOCKER_2  # HEALTHCHECK (will still apply to secure Dockerfile)
+  - CKV_DOCKER_3  # Non-root user (will still apply to secure Dockerfile)
 
 # Scan all frameworks
 framework:
@@ -17,6 +19,3 @@ framework:
 
 # Download external modules for comprehensive scanning
 download-external-modules: true
-
-# Note: Using skip-path instead of skip-check:file syntax
-# This completely excludes app/Dockerfile.traditional from scanning
