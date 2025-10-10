@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [ "main" ]
 
+permissions:
+  contents: read
+
 env:
   IMAGE_NAME: zerotrust-app
   SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -13,9 +16,13 @@ env:
 jobs:
   sonarqube-sast:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4  
       with:
         fetch-depth: 0
 
@@ -27,9 +34,13 @@ jobs:
 
   infrastructure-security:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4  
 
     - name: Run Checkov
       uses: bridgecrewio/checkov-action@v12
@@ -40,20 +51,23 @@ jobs:
         output_file_path: checkov-results.sarif
 
     - name: Upload Checkov Results
-      uses: github/codeql-action/upload-sarif@v2
+      uses: github/codeql-action/upload-sarif@v3  
       with:
         sarif_file: checkov-results.sarif
 
   container-security:
     runs-on: ubuntu-latest
     needs: [sonarqube-sast, infrastructure-security]
+    permissions:
+      contents: read
+      security-events: write
     
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4 
 
     - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v2
+      uses: docker/setup-buildx-action@v3  
 
     - name: Build secure container image
       run: |
@@ -69,17 +83,19 @@ jobs:
         severity: CRITICAL,HIGH
 
     - name: Upload Trivy Results
-      uses: github/codeql-action/upload-sarif@v2
+      uses: github/codeql-action/upload-sarif@v3  
       with:
         sarif_file: trivy-results.sarif
 
   zap-dast:
     runs-on: ubuntu-latest
     needs: container-security
+    permissions:
+      contents: read
     
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4  
 
     - name: Build and run application container
       run: |
@@ -98,17 +114,19 @@ jobs:
       run: docker stop test-app || true
 
     - name: Upload ZAP Report
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4 
       with:
         name: zap-scan-report
         path: zap-report.html
 
   dependency-scan:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4  
 
     - name: OWASP Dependency Check
       uses: dependency-check/Dependency-Check_Action@main
@@ -122,7 +140,7 @@ jobs:
           --enableRetired
 
     - name: Upload Dependency Report
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4 
       with:
         name: dependency-check-report
         path: reports/
@@ -130,6 +148,8 @@ jobs:
   security-gate:
     runs-on: ubuntu-latest
     needs: [sonarqube-sast, zap-dast, container-security, dependency-scan]
+    permissions:
+      contents: read
     
     steps:
     - name: Security Compliance Check
@@ -156,7 +176,7 @@ jobs:
         echo "All security gates passed successfully!" >> security-report.md
         
     - name: Upload Security Report
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4  
       with:
         name: security-compliance-report
         path: security-report.md

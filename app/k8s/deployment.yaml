@@ -1,7 +1,13 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: production
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: static-website
+  namespace: production
 spec:
   replicas: 1
   selector:
@@ -12,16 +18,89 @@ spec:
       labels:
         app: static-website
     spec:
+      # Disable automatic service account token mounting
+      automountServiceAccountToken: false
+      
+      # Pod-level security context
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10000
+        fsGroup: 10000
+        seccompProfile:
+          type: RuntimeDefault
+      
       containers:
       - name: static-website
-        image: ${{ secrets.DOCKERHUB_USERNAME }}/devsecops-for-zerotrust:latest
+        # Use specific version tag with digest (replace with your actual image digest)
+        # To get digest: docker pull your-image:tag && docker inspect --format='{{index .RepoDigests 0}}' your-image:tag
+        image: ${{ secrets.DOCKERHUB_USERNAME }}/devsecops-for-zerotrust:v1.0.0
+        
         ports:
         - containerPort: 80
+          protocol: TCP
+        
+        # Container-level security context
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 10000
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+              - ALL
+              - NET_RAW
+        
+        # Resource limits and requests
+        resources:
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+          requests:
+            cpu: "250m"
+            memory: "256Mi"
+        
+        # Liveness probe
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        
+        # Readiness probe
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        
+        # Volume mounts for writable directories (since we use readOnlyRootFilesystem)
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+        - name: cache
+          mountPath: /var/cache/nginx
+        - name: run
+          mountPath: /var/run
+      
+      volumes:
+      - name: tmp
+        emptyDir: {}
+      - name: cache
+        emptyDir: {}
+      - name: run
+        emptyDir: {}
 ---
 apiVersion: v1
 kind: Service
 metadata:
   name: static-website-service
+  namespace: production
 spec:
   selector:
     app: static-website
@@ -30,4 +109,33 @@ spec:
       port: 80
       targetPort: 80
   type: NodePort
-  
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: static-website-netpol
+  namespace: production
+spec:
+  podSelector:
+    matchLabels:
+      app: static-website
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - podSelector: {}
+    ports:
+    - protocol: TCP
+      port: 80
+  egress:
+  - to:
+    - podSelector: {}
+    ports:
+    - protocol: TCP
+      port: 53  # DNS
+  - to:
+    - podSelector: {}
+    ports:
+    - protocol: UDP
+      port: 53  # DNS

@@ -1,17 +1,24 @@
-
 name: Traditional DevOps Pipeline
 
 on:
   push:
     branches: [ "main" ]
 
+# Fix: Proper top-level permissions (CKV2_GHA_1)
+permissions:
+  contents: read
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    # Job-level permissions
+    permissions:
+      contents: read
+      packages: write
     
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4  # Updated to v4
 
     - name: Build Docker image
       run: |
