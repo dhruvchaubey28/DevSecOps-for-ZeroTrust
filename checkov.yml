@@ -1,0 +1,21 @@
+# Checkov Configuration
+soft-fail: false
+compact: true
+quiet: false
+
+# Skip checks only for intentionally insecure files (demo/comparison purposes)
+skip-check:
+  # Skip checks ONLY for the traditional Dockerfile (intentionally insecure for demonstration)
+  - CKV_DOCKER_2:app/Dockerfile.traditional  # No HEALTHCHECK (traditional approach)
+  - CKV_DOCKER_3:app/Dockerfile.traditional  # Runs as root (traditional approach)
+  - CKV_GIT_4  # GitHub repository made public (acceptable for demo projects)
+
+# Scan all frameworks
+framework:
+  - all
+
+# Download external modules for comprehensive scanning
+download-external-modules: true
+
+# Note: The main Dockerfile (Dockerfile.secure) will still be fully checked
+# This ensures zero-trust security principles are enforced on production code

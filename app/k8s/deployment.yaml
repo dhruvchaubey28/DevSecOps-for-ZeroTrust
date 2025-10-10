@@ -34,6 +34,8 @@ spec:
         # Using versioned tag - will be replaced with digest by CI/CD pipeline
         # Format: username/image@sha256:digest
         image: dhruvchaubey28/devsecops-for-zerotrust:v1.0.0
+        # Image pull policy set to Always for security (CKV_K8S_15)
+        imagePullPolicy: Always
         
         ports:
         - containerPort: 80
