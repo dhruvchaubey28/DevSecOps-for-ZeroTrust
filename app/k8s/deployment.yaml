@@ -31,9 +31,9 @@ spec:
       
       containers:
       - name: static-website
-        # Use specific version tag with digest (replace with your actual image digest)
-        # To get digest: docker pull your-image:tag && docker inspect --format='{{index .RepoDigests 0}}' your-image:tag
-        image: ${{ secrets.DOCKERHUB_USERNAME }}/devsecops-for-zerotrust:v1.0.0
+        # Using versioned tag - will be replaced with digest by CI/CD pipeline
+        # Format: username/image@sha256:digest
+        image: dhruvchaubey28/devsecops-for-zerotrust:v1.0.0
         
         ports:
         - containerPort: 80
