@@ -42,6 +42,14 @@ jobs:
         severity: CRITICAL,HIGH
         exit-code: 1
 
+    - name: Set up Kind
+      uses: helm/kind-action@v1.5.0
+      with:
+        version: v0.20.0
+        clusterName: test-cluster
+        # Load Docker image into Kind
+        loadImage: ${{ secrets.DOCKERHUB_USERNAME }}/devsecops-for-zerotrust:latest
+
     - name: Install kubectl
       run: |
         curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" || { echo "Download failed"; exit 1; }
@@ -50,22 +58,24 @@ jobs:
         sudo mv kubectl /usr/local/bin/
         kubectl version --client
 
-    - name: Set up KUBECONFIG
-      run: |
-        mkdir -p $HOME/.kube
-        echo "${{ secrets.KUBECONFIG }}" > $HOME/.kube/config
-        chmod 600 $HOME/.kube/config
-      env:
-        KUBECONFIG: $HOME/.kube/config
-
-    - name: Debug - Check cluster access
+    - name: Debug - Check Kind cluster
       run: |
         kubectl cluster-info
         kubectl get nodes
-
-    - name: Deploy to Kubernetes cluster
-      run: |
-        kubectl apply -f ./app/k8s/deployment.yaml
-        kubectl rollout status deployment/static-website
+        kubectl get pods --all-namespaces
       env:
-        KUBECONFIG: $HOME/.kube/config
+        KUBECONFIG: /home/runner/.kube/config
+
+    - name: Deploy to Kind cluster
+      run: |
+        # Substitute DOCKERHUB_USERNAME in deployment.yaml
+        export DOCKERHUB_USERNAME=${{ secrets.DOCKERHUB_USERNAME }}
+        envsubst < ./app/k8s/deployment.yaml > ./app/k8s/deployment-substituted.yaml
+        # Apply the substituted manifest
+        kubectl apply -f ./app/k8s/deployment-substituted.yaml
+        kubectl rollout status deployment/static-website
+        # Debug: Check service and get NodePort URL
+        kubectl get svc static-website-service
+        minikube service static-website-service --url
+      env:
+        KUBECONFIG: /home/runner/.kube/config
